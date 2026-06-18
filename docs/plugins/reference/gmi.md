@@ -1,5 +1,5 @@
 ---
-summary: "OpenClaw GMI Cloud provider plugin."
+summary: "Adds Gmi, Gmi Cloud, Gmicloud model provider support to OpenClaw."
 read_when:
   - You are installing, configuring, or auditing the gmi plugin
 title: "Gmi plugin"
@@ -7,12 +7,12 @@ title: "Gmi plugin"
 
 # Gmi plugin
 
-OpenClaw GMI Cloud provider plugin.
+Adds Gmi, Gmi Cloud, Gmicloud model provider support to OpenClaw.
 
 ## Distribution
 
 - Package: `@openclaw/gmi-provider`
-- Install route: npm; ClawHub: `clawhub:@openclaw/gmi-provider`
+- Install route: included in OpenClaw
 
 ## Surface
 

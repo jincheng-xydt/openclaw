@@ -2,6 +2,7 @@
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import type {
   PluginWebSearchProviderEntry,
+  WebSearchProviderToolDefinition,
 } from "../plugins/web-provider-types.js";
 import type { RuntimeWebSearchMetadata } from "../secrets/runtime-web-tools.types.js";
 
@@ -42,4 +43,5 @@ export type ListWebSearchProvidersParams = {
 };
 
 export type RuntimeWebSearchProviderEntry = PluginWebSearchProviderEntry;
+export type RuntimeWebSearchToolDefinition = WebSearchProviderToolDefinition;
 export type RuntimeWebSearchConfig = WebSearchConfig;

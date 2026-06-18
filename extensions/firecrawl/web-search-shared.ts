@@ -1,7 +1,6 @@
 // Firecrawl plugin module implements web search shared behavior.
 import {
   createWebSearchProviderContractFields,
-  enablePluginInConfig,
   type WebSearchProviderPlugin,
 } from "openclaw/plugin-sdk/provider-web-search-contract";
 
@@ -23,12 +22,6 @@ export function getConfiguredFirecrawlFetchCredentialFallback(config?: {
 }
 
 export function buildFirecrawlWebSearchProviderBase(): Omit<WebSearchProviderPlugin, "createTool"> {
-  const contractFields = createWebSearchProviderContractFields({
-    credentialPath: FIRECRAWL_CREDENTIAL_PATH,
-    searchCredential: { type: "scoped", scopeId: "firecrawl" },
-    configuredCredential: { pluginId: "firecrawl" },
-  });
-
   return {
     id: "firecrawl",
     label: "Firecrawl Search",
@@ -41,26 +34,12 @@ export function buildFirecrawlWebSearchProviderBase(): Omit<WebSearchProviderPlu
     docsUrl: "https://docs.openclaw.ai/tools/firecrawl",
     autoDetectOrder: 60,
     credentialPath: FIRECRAWL_CREDENTIAL_PATH,
-    ...contractFields,
-    applySelectionConfig: (config) => {
-      const enabled = enablePluginInConfig(config, "firecrawl");
-      if (!enabled.enabled || enabled.config.tools?.web?.fetch?.provider) {
-        return enabled.config;
-      }
-      return {
-        ...enabled.config,
-        tools: {
-          ...enabled.config.tools,
-          web: {
-            ...enabled.config.tools?.web,
-            fetch: {
-              ...enabled.config.tools?.web?.fetch,
-              provider: "firecrawl",
-            },
-          },
-        },
-      };
-    },
+    ...createWebSearchProviderContractFields({
+      credentialPath: FIRECRAWL_CREDENTIAL_PATH,
+      searchCredential: { type: "scoped", scopeId: "firecrawl" },
+      configuredCredential: { pluginId: "firecrawl" },
+      selectionPluginId: "firecrawl",
+    }),
     getConfiguredCredentialFallback: getConfiguredFirecrawlFetchCredentialFallback,
   };
 }

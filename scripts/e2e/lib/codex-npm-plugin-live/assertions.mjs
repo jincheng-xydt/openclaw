@@ -37,10 +37,6 @@ const MAX_TRANSCRIPT_SCAN_BYTES = readPositiveIntEnv(
   "OPENCLAW_CODEX_NPM_PLUGIN_ASSERT_MAX_TRANSCRIPT_SCAN_BYTES",
   2 * 1024 * 1024,
 );
-const AGENT_TURN_TIMEOUT_SECONDS = readPositiveIntEnv(
-  "OPENCLAW_CODEX_NPM_PLUGIN_AGENT_TIMEOUT_SECONDS",
-  420,
-);
 
 function readPositiveIntEnv(name, fallback) {
   const text = String(process.env[name] ?? fallback).trim();
@@ -104,7 +100,7 @@ function configure() {
             mode: "yolo",
             approvalPolicy: "never",
             sandbox: "danger-full-access",
-            requestTimeoutMs: AGENT_TURN_TIMEOUT_SECONDS * 1000,
+            requestTimeoutMs: 420_000,
           },
         },
       },
@@ -121,7 +117,7 @@ function configure() {
       },
       workspace: path.join(state, "workspace"),
       skipBootstrap: true,
-      timeoutSeconds: AGENT_TURN_TIMEOUT_SECONDS,
+      timeoutSeconds: 420,
     },
   };
   fs.mkdirSync(path.dirname(cfgPath), { recursive: true });

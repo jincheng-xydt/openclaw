@@ -20,7 +20,7 @@ let rssHookPath = null;
 
 function readPositiveIntEnv(name, fallback, env = process.env) {
   const value = readPositiveNumberEnv(name, fallback, env);
-  if (!Number.isSafeInteger(value)) {
+  if (!Number.isInteger(value)) {
     throw new Error(`${name} must be a positive integer`);
   }
   return value;

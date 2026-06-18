@@ -633,19 +633,8 @@ async function ensureManagedChromePortAvailable(
   profile: ResolvedBrowserProfile,
   userDataDir: string,
 ): Promise<void> {
-  const configuredHost = new URL(profile.cdpUrl).hostname.replace(/^\[|\]$/g, "");
-  const probeHosts =
-    configuredHost === "127.0.0.1" ? [configuredHost] : ["127.0.0.1", configuredHost];
-  const ensureProbeHostsAvailable = async () => {
-    for (const host of probeHosts) {
-      await ensurePortAvailable(profile.cdpPort, host);
-    }
-  };
-
-  // Chromium tries IPv4 loopback first, while OpenClaw polls the configured endpoint.
-  // Probe both so neither Chrome's bind nor the later readiness check can be captured.
   try {
-    await ensureProbeHostsAvailable();
+    await ensurePortAvailable(profile.cdpPort);
     return;
   } catch (err) {
     const exe = resolveBrowserExecutable(resolved, profile);
@@ -656,7 +645,7 @@ async function ensureManagedChromePortAvailable(
       throw err;
     }
   }
-  await ensureProbeHostsAvailable();
+  await ensurePortAvailable(profile.cdpPort);
 }
 
 function chromeLaunchHints(params: {

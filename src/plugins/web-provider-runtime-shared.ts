@@ -22,7 +22,6 @@ export type ResolvePluginWebProvidersParams = {
   cache?: boolean;
   mode?: "runtime" | "setup";
   origin?: PluginManifestRecord["origin"];
-  sandboxed?: boolean;
 };
 
 type ResolveWebProviderRuntimeDeps<TEntry> = {
@@ -41,7 +40,6 @@ type ResolveWebProviderRuntimeDeps<TEntry> = {
     env?: PluginLoadOptions["env"];
     onlyPluginIds?: readonly string[];
     origin?: PluginManifestRecord["origin"];
-    sandboxed?: boolean;
   }) => string[] | undefined;
   mapRegistryProviders: (params: {
     registry: PluginRegistry;
@@ -79,8 +77,7 @@ function resolveWebProviderRuntimeContext<TEntry>(
   const shouldFilterProviders =
     params.config !== undefined ||
     params.onlyPluginIds !== undefined ||
-    params.origin !== undefined ||
-    params.sandboxed === true;
+    params.origin !== undefined;
   const { config, activationSourceConfig, autoEnabledReasons } =
     deps.resolveBundledResolutionConfig({
       ...params,
@@ -94,7 +91,6 @@ function resolveWebProviderRuntimeContext<TEntry>(
       env,
       onlyPluginIds: params.onlyPluginIds,
       origin: params.origin,
-      sandboxed: params.sandboxed,
     }),
   );
   return {
@@ -165,7 +161,6 @@ export function resolvePluginWebProviders<TEntry>(
         env,
         onlyPluginIds: params.onlyPluginIds,
         origin: params.origin,
-        sandboxed: params.sandboxed,
       }) ?? [];
     if (pluginIds.length === 0) {
       return [];

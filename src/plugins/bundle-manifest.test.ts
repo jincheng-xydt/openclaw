@@ -121,6 +121,17 @@ function setupClaudeHookFixture(
   });
 }
 
+type _ExpectedBundlePluginManifest = Omit<
+  BundlePluginManifest,
+  "bundleFormat" | "skills" | "settingsFiles" | "hooks" | "capabilities"
+> & {
+  bundleFormat: string;
+  skills: readonly string[];
+  settingsFiles: readonly string[];
+  hooks: readonly string[];
+  capabilities: readonly string[];
+};
+
 function expectBundleManifest(params: {
   rootDir: string;
   bundleFormat: "codex" | "claude" | "cursor";

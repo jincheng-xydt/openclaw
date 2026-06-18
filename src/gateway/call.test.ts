@@ -107,48 +107,6 @@ let closeReason = "";
 let helloMethods: string[] | undefined = ["health", "secrets.resolve"];
 let connectError: Error | null = null;
 
-function startStubGatewayClient() {
-  startCalls += 1;
-  if (startMode === "hello") {
-    void lastClientOptions?.onHelloOk?.({
-      features: {
-        methods: helloMethods,
-      },
-    });
-  } else if (startMode === "startup-retry-then-hello") {
-    void lastClientOptions?.onHelloOk?.({
-      features: {
-        methods: helloMethods,
-      },
-    });
-  } else if (startMode === "clean-prehello-close-then-hello") {
-    lastClientOptions?.onClose?.(1000, "", {
-      phase: "pre-hello",
-      transientPreHelloCleanClose: true,
-    });
-    void lastClientOptions?.onHelloOk?.({
-      features: {
-        methods: helloMethods,
-      },
-    });
-  } else if (startMode === "repeated-clean-prehello-close") {
-    lastClientOptions?.onClose?.(1000, "", {
-      phase: "pre-hello",
-      transientPreHelloCleanClose: true,
-    });
-    lastClientOptions?.onClose?.(1000, "", {
-      phase: "pre-hello",
-      transientPreHelloCleanClose: true,
-    });
-  } else if (startMode === "connect-error") {
-    lastClientOptions?.onConnectError?.(
-      connectError ?? connectAssemblyErrorState.create("device private key invalid"),
-    );
-  } else if (startMode === "close") {
-    lastClientOptions?.onClose?.(closeCode, closeReason);
-  }
-}
-
 vi.mock("./client.js", () => ({
   describeGatewayCloseCode: (code: number) => {
     if (code === 1000) {
@@ -186,7 +144,45 @@ vi.mock("./client.js", () => ({
       return { ok: true };
     }
     start() {
-      startStubGatewayClient();
+      startCalls += 1;
+      if (startMode === "hello") {
+        void lastClientOptions?.onHelloOk?.({
+          features: {
+            methods: helloMethods,
+          },
+        });
+      } else if (startMode === "startup-retry-then-hello") {
+        void lastClientOptions?.onHelloOk?.({
+          features: {
+            methods: helloMethods,
+          },
+        });
+      } else if (startMode === "clean-prehello-close-then-hello") {
+        lastClientOptions?.onClose?.(1000, "", {
+          phase: "pre-hello",
+          transientPreHelloCleanClose: true,
+        });
+        void lastClientOptions?.onHelloOk?.({
+          features: {
+            methods: helloMethods,
+          },
+        });
+      } else if (startMode === "repeated-clean-prehello-close") {
+        lastClientOptions?.onClose?.(1000, "", {
+          phase: "pre-hello",
+          transientPreHelloCleanClose: true,
+        });
+        lastClientOptions?.onClose?.(1000, "", {
+          phase: "pre-hello",
+          transientPreHelloCleanClose: true,
+        });
+      } else if (startMode === "connect-error") {
+        lastClientOptions?.onConnectError?.(
+          connectError ?? connectAssemblyErrorState.create("device private key invalid"),
+        );
+      } else if (startMode === "close") {
+        lastClientOptions?.onClose?.(closeCode, closeReason);
+      }
     }
     stop() {}
   },
@@ -208,6 +204,7 @@ const {
   buildGatewayProbeConnectionDetails,
   callGateway,
   callGatewayCli,
+  callGatewayScoped,
   formatGatewayClientRequestErrorJson,
   formatGatewayTransportErrorJson,
   isGatewayTransportError,
@@ -243,7 +240,45 @@ class StubGatewayClient {
     return { ok: true };
   }
   start() {
-    startStubGatewayClient();
+    startCalls += 1;
+    if (startMode === "hello") {
+      void lastClientOptions?.onHelloOk?.({
+        features: {
+          methods: helloMethods,
+        },
+      });
+    } else if (startMode === "startup-retry-then-hello") {
+      void lastClientOptions?.onHelloOk?.({
+        features: {
+          methods: helloMethods,
+        },
+      });
+    } else if (startMode === "clean-prehello-close-then-hello") {
+      lastClientOptions?.onClose?.(1000, "", {
+        phase: "pre-hello",
+        transientPreHelloCleanClose: true,
+      });
+      void lastClientOptions?.onHelloOk?.({
+        features: {
+          methods: helloMethods,
+        },
+      });
+    } else if (startMode === "repeated-clean-prehello-close") {
+      lastClientOptions?.onClose?.(1000, "", {
+        phase: "pre-hello",
+        transientPreHelloCleanClose: true,
+      });
+      lastClientOptions?.onClose?.(1000, "", {
+        phase: "pre-hello",
+        transientPreHelloCleanClose: true,
+      });
+    } else if (startMode === "connect-error") {
+      lastClientOptions?.onConnectError?.(
+        connectError ?? connectAssemblyErrorState.create("device private key invalid"),
+      );
+    } else if (startMode === "close") {
+      lastClientOptions?.onClose?.(closeCode, closeReason);
+    }
   }
   stop() {}
   async stopAndWait() {}
@@ -756,10 +791,10 @@ describe("callGateway url resolution", () => {
   it("passes explicit scopes through, including empty arrays", async () => {
     setLocalLoopbackGatewayConfig();
 
-    await callGateway({ method: "health", scopes: ["operator.read"] });
+    await callGatewayScoped({ method: "health", scopes: ["operator.read"] });
     expect(lastClientOptions?.scopes).toEqual(["operator.read"]);
 
-    await callGateway({ method: "health", scopes: [] });
+    await callGatewayScoped({ method: "health", scopes: [] });
     expect(lastClientOptions?.scopes).toStrictEqual([]);
   });
 

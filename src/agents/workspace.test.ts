@@ -23,6 +23,7 @@ import {
   filterBootstrapFilesForSession,
   isWorkspaceBootstrapPending,
   loadWorkspaceBootstrapFiles,
+  reconcileWorkspaceBootstrapCompletion,
   resolveWorkspaceBootstrapStatus,
   resolveDefaultAgentWorkspaceDir,
   resolveWorkspaceAttestationPath,
@@ -616,7 +617,9 @@ describe("ensureAgentWorkspace", () => {
       content: "# IDENTITY.md\n\n- **Name:** Example\n",
     });
 
-    await ensureAgentWorkspace({ dir: tempDir, ensureBootstrapFiles: true });
+    const result = await reconcileWorkspaceBootstrapCompletion(tempDir);
+    expect(result.repaired).toBe(true);
+    expect(result.bootstrapExists).toBe(false);
     await expectPathMissing(path.join(tempDir, DEFAULT_BOOTSTRAP_FILENAME));
     const state = await readWorkspaceState(tempDir);
     expect(state.bootstrapSeededAt).toMatch(/\d{4}-\d{2}-\d{2}T/);
@@ -639,7 +642,10 @@ describe("ensureAgentWorkspace", () => {
       .mockRejectedValueOnce(Object.assign(new Error("not a directory"), { code: "ENOTDIR" }));
 
     try {
-      await ensureAgentWorkspace({ dir: tempDir, ensureBootstrapFiles: true });
+      const result = await reconcileWorkspaceBootstrapCompletion(tempDir);
+
+      expect(result.repaired).toBe(true);
+      expect(result.bootstrapExists).toBe(true);
       expect(rmSpy).toHaveBeenCalledWith(bootstrapPath, { force: true });
       await expect(fs.access(bootstrapPath)).resolves.toBeUndefined();
       const state = await readWorkspaceState(tempDir);
@@ -660,7 +666,9 @@ describe("ensureAgentWorkspace", () => {
       content: "# SOUL.md\n\nUse a concise, practical voice.\n",
     });
 
-    await ensureAgentWorkspace({ dir: tempDir, ensureBootstrapFiles: true });
+    const result = await reconcileWorkspaceBootstrapCompletion(tempDir);
+    expect(result.repaired).toBe(true);
+    expect(result.bootstrapExists).toBe(false);
     await expectPathMissing(path.join(tempDir, DEFAULT_BOOTSTRAP_FILENAME));
   });
 
@@ -670,7 +678,9 @@ describe("ensureAgentWorkspace", () => {
     await fs.mkdir(path.join(tempDir, ".git"), { recursive: true });
     await fs.writeFile(path.join(tempDir, ".git", "HEAD"), "ref: refs/heads/main\n");
 
-    await ensureAgentWorkspace({ dir: tempDir, ensureBootstrapFiles: true });
+    const result = await reconcileWorkspaceBootstrapCompletion(tempDir);
+    expect(result.repaired).toBe(false);
+    expect(result.bootstrapExists).toBe(true);
     await expect(resolveWorkspaceBootstrapStatus(tempDir)).resolves.toBe("pending");
     await expect(
       fs.access(path.join(tempDir, DEFAULT_BOOTSTRAP_FILENAME)),

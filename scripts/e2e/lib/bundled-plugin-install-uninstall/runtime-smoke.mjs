@@ -8,8 +8,6 @@ import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 
 const TOKEN = "bundled-plugin-runtime-smoke-token";
-const RUNTIME_PORT_BASE_ENV = "OPENCLAW_BUNDLED_PLUGIN_RUNTIME_PORT_BASE";
-const TCP_PORT_MAX = 65535;
 const OUTPUT_CAPTURE_CHARS = readPositiveIntEnv(
   "OPENCLAW_BUNDLED_PLUGIN_RUNTIME_OUTPUT_CHARS",
   1024 * 1024,
@@ -68,7 +66,7 @@ function readPositiveInt(raw, fallback, name) {
     throw new Error(`invalid ${name}: ${text}`);
   }
   const parsed = Number(text);
-  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+  if (!Number.isInteger(parsed) || parsed <= 0) {
     throw new Error(`invalid ${name}: ${text}`);
   }
   return parsed;
@@ -87,17 +85,6 @@ function readNonNegativeInt(raw, fallback, name) {
     throw new Error(`invalid ${name}: ${text}`);
   }
   return parsed;
-}
-
-export function resolveRuntimeSmokePort(pluginIndex, offset = 0, env = process.env) {
-  const base = readPositiveInt(env[RUNTIME_PORT_BASE_ENV], 19000, RUNTIME_PORT_BASE_ENV);
-  const port = base + pluginIndex * 3 + offset;
-  if (!Number.isSafeInteger(port) || port > TCP_PORT_MAX) {
-    throw new Error(
-      `${RUNTIME_PORT_BASE_ENV} with bundled plugin runtime index ${pluginIndex} and offset ${offset} must resolve to a TCP port from 1 to 65535. Got: ${port}`,
-    );
-  }
-  return port;
 }
 
 function readJson(file) {
@@ -979,7 +966,8 @@ async function smokePlugin(pluginId, pluginDir, requiresConfig, pluginIndex, plu
   }
   const manifest = loadManifest(pluginDir, pluginRoot);
   const plan = buildPluginPlan(manifest);
-  const port = resolveRuntimeSmokePort(pluginIndex);
+  const port =
+    readPositiveIntEnv("OPENCLAW_BUNDLED_PLUGIN_RUNTIME_PORT_BASE", 19000) + pluginIndex * 3;
   const config = ensureGatewayConfig(
     activateSmokePlugin(readConfig(), pluginId, plan.channels),
     port,
@@ -1311,7 +1299,8 @@ async function smokeTtsGlobalDisable(pluginId, pluginDir, provider, pluginIndex,
     console.log(`Global-disable TTS smoke skipped for ${pluginId}: no speech provider contract`);
     return;
   }
-  const port = resolveRuntimeSmokePort(pluginIndex, 1);
+  const port =
+    readPositiveIntEnv("OPENCLAW_BUNDLED_PLUGIN_RUNTIME_PORT_BASE", 19000) + pluginIndex * 3 + 1;
   const env = createIsolatedStateEnv(`tts-disabled-${pluginId}`);
   writeConfig(
     ensureGatewayConfig(
@@ -1363,7 +1352,8 @@ async function smokeOpenAiTts(pluginIndex) {
     console.log("OpenAI key-backed TTS smoke skipped: OPENAI_API_KEY is not set");
     return;
   }
-  const port = resolveRuntimeSmokePort(pluginIndex, 2);
+  const port =
+    readPositiveIntEnv("OPENCLAW_BUNDLED_PLUGIN_RUNTIME_PORT_BASE", 19000) + pluginIndex * 3 + 2;
   const env = createIsolatedStateEnv("tts-openai-live");
   writeConfig(
     ensureGatewayConfig(

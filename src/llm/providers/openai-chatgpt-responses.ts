@@ -837,6 +837,13 @@ function getOrCreateWebSocketDebugStats(sessionId: string): OpenAICodexWebSocket
   return stats;
 }
 
+export function getOpenAICodexWebSocketDebugStats(
+  sessionId: string,
+): OpenAICodexWebSocketDebugStats | undefined {
+  const stats = websocketDebugStats.get(sessionId);
+  return stats ? { ...stats } : undefined;
+}
+
 export function resetOpenAICodexWebSocketDebugStats(sessionId?: string): void {
   if (sessionId) {
     websocketDebugStats.delete(sessionId);

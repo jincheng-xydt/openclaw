@@ -16,15 +16,6 @@ endpoint and API key. It is OpenAI-compatible, so most OpenAI SDKs work by switc
 | API      | OpenAI-compatible                 |
 | Base URL | `https://qianfan.baidubce.com/v2` |
 
-## Install plugin
-
-Install the official plugin, then restart Gateway:
-
-```bash
-openclaw plugins install @openclaw/qianfan-provider
-openclaw gateway restart
-```
-
 ## Getting started
 
 <Steps>
@@ -54,7 +45,7 @@ openclaw gateway restart
 | `qianfan/ernie-5.0-thinking-preview` | text, image | 119,000 | 64,000     | Yes       | Multimodal    |
 
 <Tip>
-The default model ref is `qianfan/deepseek-v3.2`. You only need to override `models.providers.qianfan` when you need a custom base URL or model metadata.
+The default bundled model ref is `qianfan/deepseek-v3.2`. You only need to override `models.providers.qianfan` when you need a custom base URL or model metadata.
 </Tip>
 
 ## Config example
@@ -107,7 +98,7 @@ The default model ref is `qianfan/deepseek-v3.2`. You only need to override `mod
   </Accordion>
 
   <Accordion title="Catalog and overrides">
-    The static catalog currently includes `deepseek-v3.2` and `ernie-5.0-thinking-preview`. Add or override `models.providers.qianfan` only when you need a custom base URL or model metadata.
+    The bundled catalog currently includes `deepseek-v3.2` and `ernie-5.0-thinking-preview`. Add or override `models.providers.qianfan` only when you need a custom base URL or model metadata.
 
     <Note>
     Model refs use the `qianfan/` prefix (for example `qianfan/deepseek-v3.2`).

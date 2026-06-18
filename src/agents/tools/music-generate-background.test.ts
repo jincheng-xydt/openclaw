@@ -19,8 +19,8 @@ vi.mock("../subagent-announce-delivery.js", () => announceDeliveryMocks);
 
 const {
   createMusicGenerationTaskRun,
-  musicGenerationTaskLifecycle,
   recordMusicGenerationTaskProgress,
+  wakeMusicGenerationTaskCompletion,
 } = await import("./music-generate-background.js");
 
 function getDeliveredInternalEvents(): Array<Record<string, unknown>> {
@@ -106,7 +106,7 @@ describe("music generate background helpers", () => {
       path: "direct",
     });
 
-    await musicGenerationTaskLifecycle.wakeTaskCompletion({
+    await wakeMusicGenerationTaskCompletion({
       ...createMediaCompletionFixture({
         runId: "tool:music_generate:abc",
         taskLabel: "night-drive synthwave",
@@ -131,7 +131,7 @@ describe("music generate background helpers", () => {
       mediaUrls: ["/tmp/generated-night-drive.mp3"],
     });
 
-    await musicGenerationTaskLifecycle.wakeTaskCompletion({
+    await wakeMusicGenerationTaskCompletion({
       ...completion,
       handle: {
         ...completion.handle,
@@ -156,7 +156,7 @@ describe("music generate background helpers", () => {
       result: "provider failed",
     });
 
-    await musicGenerationTaskLifecycle.wakeTaskCompletion({
+    await wakeMusicGenerationTaskCompletion({
       ...completion,
       status: "error",
       statusLabel: "failed",
@@ -185,7 +185,7 @@ describe("music generate background helpers", () => {
         mediaUrls: ["/tmp/generated-night-drive.mp3"],
       });
 
-      await musicGenerationTaskLifecycle.wakeTaskCompletion({
+      await wakeMusicGenerationTaskCompletion({
         ...completion,
         handle: {
           ...completion.handle,
@@ -208,7 +208,7 @@ describe("music generate background helpers", () => {
       path: "direct",
     });
 
-    await musicGenerationTaskLifecycle.wakeTaskCompletion({
+    await wakeMusicGenerationTaskCompletion({
       ...createMediaCompletionFixture({
         directSend: true,
         runId: "tool:music_generate:abc",

@@ -335,6 +335,8 @@ export function createCronToolSchema(): TSchema {
   );
 }
 
+export const CronToolSchema = createCronToolSchema();
+
 type CronToolOptions = {
   agentSessionKey?: string;
   currentDeliveryContext?: DeliveryContext;

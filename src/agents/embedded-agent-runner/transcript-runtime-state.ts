@@ -1,3 +1,4 @@
+import fs from "node:fs/promises";
 import type {
   SessionTranscriptRuntimeScope,
   SessionTranscriptRuntimeTarget,
@@ -5,12 +6,18 @@ import type {
 import { resolveSessionTranscriptRuntimeReadTarget } from "../../config/sessions/session-accessor.js";
 import {
   persistTranscriptStateMutation,
+  readTranscriptFileState,
   type TranscriptFileState,
   type TranscriptPersistedEntry,
 } from "./transcript-file-state.js";
 
 export type RuntimeTranscriptScope = SessionTranscriptRuntimeScope;
 type RuntimeTranscriptTarget = SessionTranscriptRuntimeTarget;
+
+type RuntimeTranscriptState = {
+  state: TranscriptFileState;
+  target: RuntimeTranscriptTarget;
+};
 
 /**
  * Resolves the runtime transcript target for read/probe operations without
@@ -20,6 +27,19 @@ export async function resolveRuntimeTranscriptReadTarget(
   scope: RuntimeTranscriptScope,
 ): Promise<RuntimeTranscriptTarget> {
   return await resolveSessionTranscriptRuntimeReadTarget(scope);
+}
+
+/**
+ * Reads transcript state through the runtime transcript identity contract.
+ */
+export async function readRuntimeTranscriptState(
+  scope: RuntimeTranscriptScope,
+): Promise<RuntimeTranscriptState> {
+  const target = await resolveRuntimeTranscriptReadTarget(scope);
+  return {
+    state: await readTranscriptFileState(target.sessionFile),
+    target,
+  };
 }
 
 /**
@@ -35,4 +55,35 @@ export async function persistRuntimeTranscriptStateMutation(params: {
     state: params.state,
     appendedEntries: params.appendedEntries,
   });
+}
+
+/**
+ * Checks existence of the current runtime transcript without exposing path
+ * identity to callers.
+ */
+export async function runtimeTranscriptExists(scope: RuntimeTranscriptScope): Promise<boolean> {
+  const target = await resolveRuntimeTranscriptReadTarget(scope);
+  try {
+    const stat = await fs.stat(target.sessionFile);
+    return stat.isFile();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Deletes the current runtime transcript. This remains file-backed until the
+ * SQLite implementation owns transcript deletion in 3.2.
+ */
+export async function deleteRuntimeTranscript(scope: RuntimeTranscriptScope): Promise<boolean> {
+  const target = await resolveRuntimeTranscriptReadTarget(scope);
+  try {
+    await fs.unlink(target.sessionFile);
+    return true;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+      return false;
+    }
+    throw err;
+  }
 }

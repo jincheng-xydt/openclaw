@@ -6,7 +6,7 @@ scenario:
   coverage:
     primary:
       - ui.control
-      - ui.dashboard-auth-bootstrap
+      - dashboard-open-auth-bootstrap
     secondary:
       - media.image-understanding
       - channels.qa-channel

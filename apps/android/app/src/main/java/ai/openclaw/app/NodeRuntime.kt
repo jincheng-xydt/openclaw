@@ -1396,9 +1396,8 @@ class NodeRuntime(
     mode: VoiceCaptureMode,
     persistManualMic: Boolean = true,
   ) {
-    if (mode.requiresMicrophonePermission && !hasRecordAudioPermission()) {
+    if (mode == VoiceCaptureMode.TalkMode && !hasRecordAudioPermission()) {
       _voiceCaptureMode.value = VoiceCaptureMode.Off
-      prefs.setVoiceMicEnabled(false)
       externalAudioCaptureActive.value = false
       return
     }
@@ -1468,9 +1467,6 @@ class NodeRuntime(
       voiceReplySpeaker.stopTts()
     }
   }
-
-  private val VoiceCaptureMode.requiresMicrophonePermission: Boolean
-    get() = this == VoiceCaptureMode.ManualMic || this == VoiceCaptureMode.TalkMode
 
   fun refreshGatewayConnection() {
     val endpoint = connectedEndpoint

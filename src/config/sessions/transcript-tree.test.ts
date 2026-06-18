@@ -3,6 +3,9 @@ import {
   isSessionTranscriptLeafControl,
   mergeSessionTranscriptVisiblePathWithOpaqueAppendPath,
   parseSessionTranscriptTreeEntry,
+  readSessionTranscriptLeafUpdate,
+  resolveSessionTranscriptAppendParentId,
+  resolveSessionTranscriptLeafId,
   scanSessionTranscriptTree,
   selectSessionTranscriptLeafControlledPath,
   selectSessionTranscriptTreePathNodes,
@@ -41,6 +44,7 @@ describe("session transcript tree helpers", () => {
       leafId: "active-tail",
       appendParentId: "active-tail",
     });
+    expect(readSessionTranscriptLeafUpdate(leaf)).toBe("active-tail");
   });
 
   it("resolves a distinct opaque append parent from a leaf control", () => {
@@ -56,10 +60,8 @@ describe("session transcript tree helpers", () => {
       },
     ];
 
-    expect(scanSessionTranscriptTree(entries)).toMatchObject({
-      leafId: "active-tail",
-      appendParentId: "plugin-metadata",
-    });
+    expect(resolveSessionTranscriptLeafId(entries)).toBe("active-tail");
+    expect(resolveSessionTranscriptAppendParentId(entries)).toBe("plugin-metadata");
     expect(selectSessionTranscriptLeafControlledPath(entries)).toEqual(entries.slice(0, 1));
   });
 
@@ -75,16 +77,14 @@ describe("session transcript tree helpers", () => {
     const metadata = { type: "metadata", id: "plugin-metadata", parentId: "side-entry" };
     const entries = [activeRoot, sideEntry, leafControl, metadata];
 
-    expect(scanSessionTranscriptTree(entries)).toMatchObject({
-      leafId: "active-root",
-      appendParentId: "plugin-metadata",
-    });
+    expect(resolveSessionTranscriptLeafId(entries)).toBe("active-root");
+    expect(resolveSessionTranscriptAppendParentId(entries)).toBe("plugin-metadata");
     expect(selectSessionTranscriptLeafControlledPath(entries)).toEqual([activeRoot]);
   });
 
   it("resolves the last valid leaf update in file order", () => {
     expect(
-      scanSessionTranscriptTree([
+      resolveSessionTranscriptLeafId([
         { type: "message", id: "active-tail", parentId: null },
         { type: "message", id: "inactive-tail", parentId: "active-tail" },
         {
@@ -93,7 +93,7 @@ describe("session transcript tree helpers", () => {
           parentId: "inactive-tail",
           targetId: "active-tail",
         },
-      ]).leafId,
+      ]),
     ).toBe("active-tail");
   });
 
@@ -109,10 +109,8 @@ describe("session transcript tree helpers", () => {
       },
     ];
 
-    expect(scanSessionTranscriptTree(entries)).toMatchObject({
-      leafId: null,
-      appendParentId: "old-tail",
-    });
+    expect(resolveSessionTranscriptLeafId(entries)).toBeNull();
+    expect(resolveSessionTranscriptAppendParentId(entries)).toBe("old-tail");
     expect(selectSessionTranscriptLeafControlledPath(entries)).toEqual([]);
   });
 

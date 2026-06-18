@@ -1,7 +1,7 @@
 // Gateway call helper tests pin URL override, token, and RPC scope behavior for
 // agent tools that route through the local gateway client.
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { CallGatewayOptions } from "../../gateway/call.js";
+import type { CallGatewayScopedOptions } from "../../gateway/call.js";
 import { createEmptyPluginRegistry } from "../../plugins/registry-empty.js";
 import { setActivePluginRegistry } from "../../plugins/runtime.js";
 import { callGatewayTool, readGatewayCallOptions, resolveGatewayOptions } from "./gateway.js";
@@ -46,13 +46,13 @@ vi.mock("../../infra/device-identity.js", () => ({
   },
 }));
 
-function capturedGatewayCall(): CallGatewayOptions {
+function capturedGatewayCall(): CallGatewayScopedOptions {
   expect(mocks.callGateway).toHaveBeenCalledTimes(1);
   const call = mocks.callGateway.mock.calls[0];
   if (!call) {
     throw new Error("expected callGateway to be called");
   }
-  return call[0] as CallGatewayOptions;
+  return call[0] as CallGatewayScopedOptions;
 }
 
 describe("gateway tool defaults", () => {
@@ -315,7 +315,6 @@ describe("gateway tool defaults", () => {
     expect(call.method).toBe("exec.approval.request");
     expect(call.scopes).toEqual(["operator.approvals"]);
     expect(call.approvalRuntimeToken).toEqual(expect.any(String));
-    expect(call.deviceIdentity).toEqual(mocks.deviceIdentity);
   });
 
   it("marks local approval wait calls as approval runtime calls", async () => {
@@ -327,31 +326,6 @@ describe("gateway tool defaults", () => {
     expect(call.method).toBe("exec.approval.waitDecision");
     expect(call.scopes).toEqual(["operator.approvals"]);
     expect(call.approvalRuntimeToken).toEqual(expect.any(String));
-    expect(call.deviceIdentity).toEqual(mocks.deviceIdentity);
-  });
-
-  it("marks local plugin approval wait calls with runtime and device identity", async () => {
-    mocks.callGateway.mockResolvedValueOnce({ decision: "allow-once" });
-
-    await callGatewayTool("plugin.approval.waitDecision", {}, { id: "approval-id" });
-
-    const call = capturedGatewayCall();
-    expect(call.method).toBe("plugin.approval.waitDecision");
-    expect(call.scopes).toEqual(["operator.approvals"]);
-    expect(call.approvalRuntimeToken).toEqual(expect.any(String));
-    expect(call.deviceIdentity).toEqual(mocks.deviceIdentity);
-  });
-
-  it("marks local plugin approval request calls with runtime and device identity", async () => {
-    mocks.callGateway.mockResolvedValueOnce({ id: "plugin:approval-id" });
-
-    await callGatewayTool("plugin.approval.request", {}, { title: "approve", description: "test" });
-
-    const call = capturedGatewayCall();
-    expect(call.method).toBe("plugin.approval.request");
-    expect(call.scopes).toEqual(["operator.approvals"]);
-    expect(call.approvalRuntimeToken).toEqual(expect.any(String));
-    expect(call.deviceIdentity).toEqual(mocks.deviceIdentity);
   });
 
   it("marks local approval resolve calls as approval runtime calls", async () => {
@@ -367,18 +341,6 @@ describe("gateway tool defaults", () => {
     expect(call.method).toBe("exec.approval.resolve");
     expect(call.scopes).toEqual(["operator.approvals"]);
     expect(call.approvalRuntimeToken).toEqual(expect.any(String));
-    expect(call.deviceIdentity).toEqual(mocks.deviceIdentity);
-  });
-
-  it("does not require device identity for local approval runtime calls", async () => {
-    mocks.deviceIdentityError = new Error("state directory read-only");
-    mocks.callGateway.mockResolvedValueOnce({ decision: "allow-once" });
-
-    await callGatewayTool("exec.approval.waitDecision", {}, { id: "approval-id" });
-
-    const call = capturedGatewayCall();
-    expect(call.approvalRuntimeToken).toEqual(expect.any(String));
-    expect(call).not.toHaveProperty("deviceIdentity");
   });
 
   it("does not send the local approval runtime token to configured remote gateways", async () => {
@@ -413,7 +375,7 @@ describe("gateway tool defaults", () => {
     await callGatewayTool("exec.approval.waitDecision", {}, { id: "approval-id" });
 
     const call = capturedGatewayCall();
-    expect(call.deviceIdentity).toEqual(mocks.deviceIdentity);
+    expect(call).not.toHaveProperty("deviceIdentity");
     expect(call.approvalRuntimeToken).toEqual(expect.any(String));
   });
 

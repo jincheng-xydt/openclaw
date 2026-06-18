@@ -58,6 +58,7 @@ vi.mock("../daemon/launchd.js", async () => {
     await vi.importActual<typeof import("../daemon/launchd.js")>("../daemon/launchd.js");
   return {
     ...actual,
+    isLaunchAgentListed: vi.fn(async () => false),
     isLaunchAgentLoaded: vi.fn(async () => false),
     launchAgentPlistExists: vi.fn(async () => false),
     repairLaunchAgentBootstrap: vi.fn(async () => ({ ok: true, status: "repaired" })),

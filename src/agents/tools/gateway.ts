@@ -240,11 +240,12 @@ function resolveApprovalRequesterDeviceIdentityForGatewayTool(params: {
   if (trimToUndefined(params.opts.gatewayUrl) !== undefined) {
     return undefined;
   }
+  if (params.target !== "remote") {
+    return undefined;
+  }
   try {
     const identity = loadOrCreateDeviceIdentity();
-    // Approval request/wait calls may cross backend processes. Bind them to the
-    // persisted device id so a process-local approval token mismatch cannot hide
-    // the pending record from the matching wait call.
+    // Remote approval requests are later matched by requester device id.
     // Reject loadOrCreate's unpersisted fallback so another process can see the same id.
     const persistedIdentity = loadDeviceIdentityIfPresent();
     if (persistedIdentity?.deviceId !== identity.deviceId) {
@@ -252,9 +253,6 @@ function resolveApprovalRequesterDeviceIdentityForGatewayTool(params: {
     }
     return identity;
   } catch (error) {
-    if (params.target === "local") {
-      return undefined;
-    }
     throw new Error(
       [
         "remote approval gateway calls require a stable device identity.",

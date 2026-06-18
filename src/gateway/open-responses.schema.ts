@@ -90,6 +90,7 @@ export type ContentPart = z.infer<typeof ContentPartSchema>;
 
 export const MessageItemRoleSchema = z.enum(["system", "developer", "user", "assistant"]);
 
+export type MessageItemRole = z.infer<typeof MessageItemRoleSchema>;
 export const AssistantPhaseSchema = z.enum(["commentary", "final_answer"]);
 export type AssistantPhase = z.infer<typeof AssistantPhaseSchema>;
 

@@ -2,7 +2,6 @@
 import JSON5 from "json5";
 import { describe, expect, it } from "vitest";
 import { redactSnapshotTestHints as mainSchemaHints } from "../../test/helpers/config/redact-snapshot-test-hints.js";
-import { materializeRuntimeConfig } from "./materialize.js";
 import { REDACTED_SENTINEL, redactConfigSnapshot } from "./redact-snapshot.js";
 import {
   makeSnapshot,
@@ -10,7 +9,7 @@ import {
   type TestSnapshot,
 } from "./redact-snapshot.test-helpers.js";
 import { buildConfigSchema, type ConfigUiHints } from "./schema.js";
-import type { ConfigFileSnapshot, OpenClawConfig } from "./types.openclaw.js";
+import type { ConfigFileSnapshot } from "./types.openclaw.js";
 
 function expectNestedLevelPairValue(
   source: Record<string, Record<string, Record<string, unknown>>>,
@@ -602,27 +601,6 @@ describe("redactConfigSnapshot", () => {
     const result = redactConfigSnapshot(snapshot);
     expect(result.raw).not.toContain("abcdef1234567890ghij");
     expect(result.raw).toContain(REDACTED_SENTINEL);
-  });
-
-  it("keeps raw text when runtime materialization adds undefined safe-bin fields", () => {
-    const sourceConfig = {
-      tools: {
-        exec: {
-          ask: "off",
-          security: "full",
-        },
-      },
-    } satisfies OpenClawConfig;
-    const raw = JSON.stringify(sourceConfig);
-    const runtimeConfig = materializeRuntimeConfig(structuredClone(sourceConfig), "snapshot");
-    const snapshot = {
-      ...makeSnapshot(sourceConfig, raw),
-      config: runtimeConfig,
-      runtimeConfig,
-    };
-
-    expect(runtimeConfig.tools?.exec).toHaveProperty("safeBinProfiles", undefined);
-    expect(redactConfigSnapshot(snapshot).raw).toBe(raw);
   });
 
   it("drops raw text when overlap fallback triggers", () => {

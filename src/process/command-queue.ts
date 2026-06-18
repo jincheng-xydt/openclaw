@@ -69,9 +69,6 @@ type QueueEntry = {
   activeAheadAtEnqueue: number;
   taskTimeoutMs?: number;
   taskTimeoutProgressAtMs?: () => number | undefined;
-  taskTimeoutAbortSignal?: AbortSignal;
-  taskTimeoutAbortGraceMs?: number;
-  taskTimeoutReleaseSignal?: AbortSignal;
   onWait?: (waitMs: number, queuedAhead: number) => void;
 };
 
@@ -280,8 +277,6 @@ async function runQueueEntryTask(lane: string, entry: QueueEntry): Promise<unkno
     return await taskPromise;
   }
 
-  const taskTimeoutAbortGraceMs =
-    normalizeTaskTimeoutMs(entry.taskTimeoutAbortGraceMs) ?? taskTimeoutMs;
   const startedAtMs = Date.now();
   const readLastProgressAtMs = () => {
     let value: number | undefined;
@@ -295,64 +290,20 @@ async function runQueueEntryTask(lane: string, entry: QueueEntry): Promise<unkno
       : startedAtMs;
   };
   let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
-  let removeAbortListener: (() => void) | undefined;
-  let removeReleaseListener: (() => void) | undefined;
   let timedOut = false;
   const timeoutPromise = new Promise<never>((_, reject) => {
-    const rejectForTimeout = () => {
-      timedOut = true;
-      reject(new CommandLaneTaskTimeoutError(lane, taskTimeoutMs));
-    };
-    const armTimer = (delayMs: number, onTimeout: () => void) => {
-      if (timeoutHandle) {
-        clearTimeout(timeoutHandle);
-      }
-      if (delayMs <= 0) {
-        onTimeout();
-        return;
-      }
-      timeoutHandle = setTimeout(onTimeout, delayMs);
-      timeoutHandle.unref?.();
-    };
-    const armProgressTimeout = () => {
+    const armTimeout = () => {
       const elapsedMs = Math.max(0, Date.now() - readLastProgressAtMs());
       const remainingMs = taskTimeoutMs - elapsedMs;
       if (remainingMs <= 0) {
-        rejectForTimeout();
+        timedOut = true;
+        reject(new CommandLaneTaskTimeoutError(lane, taskTimeoutMs));
         return;
       }
-      armTimer(remainingMs, armProgressTimeout);
+      timeoutHandle = setTimeout(armTimeout, remainingMs);
+      timeoutHandle.unref?.();
     };
-    const armAbortTimeout = () => {
-      armTimer(taskTimeoutAbortGraceMs, rejectForTimeout);
-    };
-    const abortSignal = entry.taskTimeoutAbortSignal;
-    const releaseSignal = entry.taskTimeoutReleaseSignal;
-    const onRelease = () => {
-      removeReleaseListener?.();
-      rejectForTimeout();
-    };
-    if (releaseSignal?.aborted) {
-      onRelease();
-      return;
-    }
-    if (abortSignal?.aborted) {
-      armAbortTimeout();
-      return;
-    }
-    armProgressTimeout();
-    if (abortSignal) {
-      const onAbort = () => {
-        removeAbortListener?.();
-        armAbortTimeout();
-      };
-      abortSignal.addEventListener("abort", onAbort, { once: true });
-      removeAbortListener = () => abortSignal.removeEventListener("abort", onAbort);
-    }
-    if (releaseSignal) {
-      releaseSignal.addEventListener("abort", onRelease, { once: true });
-      removeReleaseListener = () => releaseSignal.removeEventListener("abort", onRelease);
-    }
+    armTimeout();
   });
 
   try {
@@ -367,11 +318,9 @@ async function runQueueEntryTask(lane: string, entry: QueueEntry): Promise<unkno
     }
     throw err;
   } finally {
-    if (timeoutHandle) {
+    if (!timedOut && timeoutHandle) {
       clearTimeout(timeoutHandle);
     }
-    removeAbortListener?.();
-    removeReleaseListener?.();
   }
 }
 
@@ -496,9 +445,6 @@ export function enqueueCommandInLane<T>(
       activeAheadAtEnqueue: 0,
       taskTimeoutMs: normalizeTaskTimeoutMs(opts?.taskTimeoutMs),
       taskTimeoutProgressAtMs: opts?.taskTimeoutProgressAtMs,
-      taskTimeoutAbortSignal: opts?.taskTimeoutAbortSignal,
-      taskTimeoutAbortGraceMs: normalizeTaskTimeoutMs(opts?.taskTimeoutAbortGraceMs),
-      taskTimeoutReleaseSignal: opts?.taskTimeoutReleaseSignal,
       onWait: opts?.onWait,
     });
     logLaneEnqueue(cleaned, getLaneDepth(state));

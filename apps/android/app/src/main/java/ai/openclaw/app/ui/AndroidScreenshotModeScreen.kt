@@ -114,11 +114,15 @@ private fun ConnectScene() {
 
 @Composable
 private fun ChatScene() {
-  ChatBubble(label = "You", text = "Hi Molty, are you there?")
+  ChatBubble(label = "You", text = "Summarize the launch checklist before I start the release.")
   ChatBubble(
-    label = "Molty",
-    text = "Always. Lurking in the shadows, exfoliating.",
+    label = "OpenClaw",
+    text = "Android archive, Play metadata, and internal testing upload are ready. Screenshots are being refreshed now.",
     raised = true,
+  )
+  CompactList(
+    title = "Working set",
+    rows = listOf("Release notes", "Play bundle", "Device screenshots"),
   )
 }
 

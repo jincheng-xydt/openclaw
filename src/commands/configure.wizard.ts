@@ -337,14 +337,10 @@ async function promptWebToolsConfig(
           };
         }
       } else {
-        workingConfig = await setupSearch(workingConfig, runtime, prompter, {
-          preserveDisabledSearchState: false,
-        });
-        const selectedSearch = workingConfig.tools?.web?.search;
+        workingConfig = await setupSearch(workingConfig, runtime, prompter);
         nextSearch = {
-          ...selectedSearch,
-          enabled:
-            selectedSearch?.enabled ?? (selectedSearch?.provider ? true : existingSearch?.enabled),
+          ...workingConfig.tools?.web?.search,
+          enabled: workingConfig.tools?.web?.search?.provider ? true : existingSearch?.enabled,
           openaiCodex: {
             ...existingSearch?.openaiCodex,
             ...(nextSearch.openaiCodex as Record<string, unknown> | undefined),
@@ -363,7 +359,7 @@ async function promptWebToolsConfig(
   );
 
   const nextFetch = {
-    ...workingConfig.tools?.web?.fetch,
+    ...existingFetch,
     enabled: enableFetch,
   };
 

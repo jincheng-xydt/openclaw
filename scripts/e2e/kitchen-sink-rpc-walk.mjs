@@ -182,13 +182,7 @@ export async function findAvailableLoopbackPort(options = {}) {
 export async function resolveKitchenSinkRpcPort(env = process.env, options = {}) {
   const rawPort = (env.OPENCLAW_KITCHEN_SINK_RPC_PORT || "").trim();
   if (rawPort) {
-    const port = readPositiveInt(rawPort, 0, "OPENCLAW_KITCHEN_SINK_RPC_PORT");
-    if (port > 65535) {
-      throw new Error(
-        `OPENCLAW_KITCHEN_SINK_RPC_PORT must be a TCP port from 1 to 65535. Got: ${JSON.stringify(rawPort)}`,
-      );
-    }
-    return port;
+    return readPositiveInt(rawPort, 0, "OPENCLAW_KITCHEN_SINK_RPC_PORT");
   }
   return await (options.findAvailablePort ?? findAvailableLoopbackPort)();
 }
@@ -923,7 +917,7 @@ export async function fetchJson(url, options = {}) {
         ...(abortPromise ? [abortPromise] : []),
       ]);
       const text = await Promise.race([
-        readBoundedResponseText(response, maxBodyBytes, timeoutPromise),
+        readBoundedResponseText(response, maxBodyBytes),
         timeoutPromise,
         ...(abortPromise ? [abortPromise] : []),
       ]);
@@ -950,44 +944,39 @@ export async function fetchJson(url, options = {}) {
   throw toLintErrorObject(lastError ?? new Error(`fetch ${url} failed`), "Non-Error thrown");
 }
 
-export async function readBoundedResponseText(response, byteLimit, timeoutPromise) {
-  const resolvedByteLimit = byteLimit ?? resolveKitchenSinkRpcConfig().fetchBodyMaxBytes;
+export async function readBoundedResponseText(
+  response,
+  byteLimit = resolveKitchenSinkRpcConfig().fetchBodyMaxBytes,
+) {
   const contentLength = response.headers?.get?.("content-length");
-  if (contentLength && /^\d+$/u.test(contentLength)) {
+  if (contentLength) {
     const parsedContentLength = Number(contentLength);
-    if (Number.isSafeInteger(parsedContentLength) && parsedContentLength > resolvedByteLimit) {
+    if (Number.isFinite(parsedContentLength) && parsedContentLength > byteLimit) {
       await response.body?.cancel?.().catch(() => undefined);
-      throw createFetchBodyTooLargeError(resolvedByteLimit);
+      throw createFetchBodyTooLargeError(byteLimit);
     }
   }
 
   const reader = response.body?.getReader?.();
   if (!reader) {
-    const text = await withOptionalTimeout(response.text(), timeoutPromise);
-    if (Buffer.byteLength(text, "utf8") > resolvedByteLimit) {
-      throw createFetchBodyTooLargeError(resolvedByteLimit);
+    const text = await response.text();
+    if (Buffer.byteLength(text, "utf8") > byteLimit) {
+      throw createFetchBodyTooLargeError(byteLimit);
     }
     return text;
   }
   const chunks = [];
   let totalBytes = 0;
   for (;;) {
-    const read = reader.read();
-    const { done, value } = await withOptionalTimeout(
-      read,
-      timeoutPromise?.catch((error) => {
-        cancelReaderSoon(reader);
-        throw error;
-      }),
-    );
+    const { done, value } = await reader.read();
     if (done) {
       break;
     }
     const chunk = Buffer.from(value);
     totalBytes += chunk.byteLength;
-    if (totalBytes > resolvedByteLimit) {
+    if (totalBytes > byteLimit) {
       await reader.cancel().catch(() => undefined);
-      throw createFetchBodyTooLargeError(resolvedByteLimit);
+      throw createFetchBodyTooLargeError(byteLimit);
     }
     chunks.push(chunk);
   }
@@ -998,19 +987,6 @@ function createFetchBodyTooLargeError(byteLimit) {
   return Object.assign(new Error(`fetch response body exceeded ${byteLimit} bytes`), {
     code: "ETOOBIG",
   });
-}
-
-async function withOptionalTimeout(promise, timeoutPromise) {
-  if (!timeoutPromise) {
-    return await promise;
-  }
-  return await Promise.race([promise, timeoutPromise]);
-}
-
-function cancelReaderSoon(reader) {
-  void Promise.resolve()
-    .then(() => reader.cancel())
-    .catch(() => undefined);
 }
 
 function configureKitchenSink(env, port) {

@@ -15,15 +15,6 @@ read_when:
 | API      | OpenAI-compatible          |
 | Base URL | `https://api.deepseek.com` |
 
-## Install plugin
-
-Install the official plugin, then restart Gateway:
-
-```bash
-openclaw plugins install @openclaw/deepseek-provider
-openclaw gateway restart
-```
-
 ## Getting started
 
 <Steps>
@@ -43,7 +34,7 @@ openclaw gateway restart
     openclaw models list --provider deepseek
     ```
 
-    To inspect the plugin's static catalog without requiring a running Gateway,
+    To inspect the bundled static catalog without requiring a running Gateway,
     use:
 
     ```bash

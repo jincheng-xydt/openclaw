@@ -173,7 +173,6 @@ describe("web-provider-runtime-shared", () => {
         env: { BRAVE_API_KEY: "key" },
         onlyPluginIds: ["brave", "firecrawl"],
         origin: "bundled",
-        sandboxed: true,
         workspaceDir: "/workspace",
       },
       {
@@ -194,7 +193,6 @@ describe("web-provider-runtime-shared", () => {
       env: { BRAVE_API_KEY: "key" },
       onlyPluginIds: ["brave", "firecrawl"],
       origin: "bundled",
-      sandboxed: true,
     });
     expect(mapRegistryProviders).toHaveBeenCalledWith({
       registry: activeRegistry,

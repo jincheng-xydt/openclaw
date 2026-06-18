@@ -6,7 +6,7 @@ read_when:
 title: "StepFun"
 ---
 
-The StepFun provider plugin supports two provider ids:
+OpenClaw includes a bundled StepFun provider plugin with two provider ids:
 
 - `stepfun` for the standard endpoint
 - `stepfun-plan` for the Step Plan endpoint
@@ -14,15 +14,6 @@ The StepFun provider plugin supports two provider ids:
 <Warning>
 Standard and Step Plan are **separate providers** with different endpoints and model ref prefixes (`stepfun/...` vs `stepfun-plan/...`). Use a China key with the `.com` endpoints and a global key with the `.ai` endpoints.
 </Warning>
-
-## Install plugin
-
-Install the official plugin, then restart Gateway:
-
-```bash
-openclaw plugins install @openclaw/stepfun-provider
-openclaw gateway restart
-```
 
 ## Region and endpoint overview
 
@@ -208,7 +199,7 @@ Choose your provider surface and follow the setup steps.
   </Accordion>
 
   <Accordion title="Notes">
-    - The provider is an official external package; install it before setup.
+    - The provider is bundled with OpenClaw, so there is no separate plugin install step.
     - `step-3.5-flash-2603` is currently exposed only on `stepfun-plan`.
     - A single auth flow writes region-matched profiles for both `stepfun` and `stepfun-plan`, so both surfaces can be discovered together.
     - Use `openclaw models list` and `openclaw models set <provider/model>` to inspect or switch models.

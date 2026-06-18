@@ -3,20 +3,11 @@ import { describe, expect, it } from "vitest";
 import {
   resolveCliStartupPolicy,
   shouldBypassConfigGuardForCommandPath,
+  shouldEnsureCliPathForCommandPath,
+  shouldHideCliBannerForCommandPath,
+  shouldLoadPluginsForCommandPath,
+  shouldSkipRouteConfigGuardForCommandPath,
 } from "./command-startup-policy.js";
-
-function resolvePolicy(params: {
-  argv?: string[];
-  commandPath: string[];
-  jsonOutputMode?: boolean;
-  env?: NodeJS.ProcessEnv;
-  routeMode?: boolean;
-}) {
-  return resolveCliStartupPolicy({
-    jsonOutputMode: false,
-    ...params,
-  });
-}
 
 describe("command-startup-policy", () => {
   it("matches config guard bypass commands", () => {
@@ -30,152 +21,161 @@ describe("command-startup-policy", () => {
 
   it("matches route-first config guard skip policy", () => {
     expect(
-      resolvePolicy({
+      shouldSkipRouteConfigGuardForCommandPath({
         commandPath: ["status"],
-        jsonOutputMode: true,
-        routeMode: true,
-      }).skipConfigGuard,
+        suppressDoctorStdout: true,
+      }),
     ).toBe(false);
     expect(
-      resolvePolicy({
+      shouldSkipRouteConfigGuardForCommandPath({
         commandPath: ["gateway", "status"],
-        routeMode: true,
-      }).skipConfigGuard,
+        suppressDoctorStdout: false,
+      }),
     ).toBe(true);
     expect(
-      resolvePolicy({
+      shouldSkipRouteConfigGuardForCommandPath({
         commandPath: ["status"],
-        routeMode: true,
-      }).skipConfigGuard,
+        suppressDoctorStdout: false,
+      }),
     ).toBe(false);
   });
 
   it("matches plugin preload policy", () => {
     expect(
-      resolvePolicy({
+      shouldLoadPluginsForCommandPath({
         commandPath: ["status"],
-      }).loadPlugins,
+        jsonOutputMode: false,
+      }),
     ).toBe(false);
     expect(
-      resolvePolicy({
+      shouldLoadPluginsForCommandPath({
         commandPath: ["status"],
         jsonOutputMode: true,
-      }).loadPlugins,
+      }),
     ).toBe(false);
     expect(
-      resolvePolicy({
+      shouldLoadPluginsForCommandPath({
         commandPath: ["health"],
-      }).loadPlugins,
+        jsonOutputMode: false,
+      }),
     ).toBe(false);
     expect(
-      resolvePolicy({
+      shouldLoadPluginsForCommandPath({
         commandPath: ["channels", "status"],
-      }).loadPlugins,
+        jsonOutputMode: false,
+      }),
     ).toBe(false);
     expect(
-      resolvePolicy({
+      shouldLoadPluginsForCommandPath({
         commandPath: ["channels", "list"],
-      }).loadPlugins,
+        jsonOutputMode: false,
+      }),
     ).toBe(false);
     expect(
-      resolvePolicy({
+      shouldLoadPluginsForCommandPath({
         commandPath: ["channels", "add"],
-      }).loadPlugins,
+        jsonOutputMode: false,
+      }),
     ).toBe(false);
     expect(
-      resolvePolicy({
+      shouldLoadPluginsForCommandPath({
         commandPath: ["channels", "logs"],
-      }).loadPlugins,
+        jsonOutputMode: false,
+      }),
     ).toBe(false);
     expect(
-      resolvePolicy({
+      shouldLoadPluginsForCommandPath({
         commandPath: ["message", "send"],
-      }).loadPlugins,
+        jsonOutputMode: false,
+      }),
     ).toBe(false);
     expect(
-      resolvePolicy({
+      shouldLoadPluginsForCommandPath({
         commandPath: ["message", "send"],
         jsonOutputMode: true,
-      }).loadPlugins,
+      }),
     ).toBe(false);
     expect(
-      resolvePolicy({
+      shouldLoadPluginsForCommandPath({
         argv: ["node", "openclaw", "agent", "--json"],
         commandPath: ["agent"],
         jsonOutputMode: true,
-      }).loadPlugins,
+      }),
     ).toBe(false);
     expect(
-      resolvePolicy({
+      shouldLoadPluginsForCommandPath({
         argv: ["node", "openclaw", "agent", "--json", "--local"],
         commandPath: ["agent"],
         jsonOutputMode: true,
-      }).loadPlugins,
+      }),
     ).toBe(true);
     expect(
-      resolvePolicy({
+      shouldLoadPluginsForCommandPath({
         argv: ["node", "openclaw", "agent"],
         commandPath: ["agent"],
-      }).loadPlugins,
+        jsonOutputMode: false,
+      }),
     ).toBe(true);
     expect(
-      resolvePolicy({
+      shouldLoadPluginsForCommandPath({
         commandPath: ["agents"],
-      }).loadPlugins,
+        jsonOutputMode: false,
+      }),
     ).toBe(false);
     expect(
-      resolvePolicy({
+      shouldLoadPluginsForCommandPath({
         commandPath: ["agents", "list"],
-      }).loadPlugins,
+        jsonOutputMode: false,
+      }),
     ).toBe(false);
     expect(
-      resolvePolicy({
+      shouldLoadPluginsForCommandPath({
         commandPath: ["agents", "list"],
         jsonOutputMode: true,
-      }).loadPlugins,
+      }),
     ).toBe(false);
     expect(
-      resolvePolicy({
+      shouldLoadPluginsForCommandPath({
         commandPath: ["agents", "bind"],
-      }).loadPlugins,
+        jsonOutputMode: false,
+      }),
     ).toBe(false);
     expect(
-      resolvePolicy({
+      shouldLoadPluginsForCommandPath({
         commandPath: ["agents", "bindings"],
         jsonOutputMode: true,
-      }).loadPlugins,
+      }),
     ).toBe(false);
     expect(
-      resolvePolicy({
+      shouldLoadPluginsForCommandPath({
         commandPath: ["agents", "unbind"],
-      }).loadPlugins,
+        jsonOutputMode: false,
+      }),
     ).toBe(false);
     expect(
-      resolvePolicy({
+      shouldLoadPluginsForCommandPath({
         commandPath: ["agents", "set-identity"],
-      }).loadPlugins,
+        jsonOutputMode: false,
+      }),
     ).toBe(false);
     expect(
-      resolvePolicy({
+      shouldLoadPluginsForCommandPath({
         commandPath: ["agents", "delete"],
         jsonOutputMode: true,
-      }).loadPlugins,
+      }),
     ).toBe(false);
   });
 
   it("matches banner suppression policy", () => {
-    expect(resolvePolicy({ commandPath: ["update", "status"], env: {} }).hideBanner).toBe(true);
-    expect(resolvePolicy({ commandPath: ["completion"], env: {} }).hideBanner).toBe(true);
+    expect(shouldHideCliBannerForCommandPath(["update", "status"])).toBe(true);
+    expect(shouldHideCliBannerForCommandPath(["completion"])).toBe(true);
     expect(
-      resolvePolicy({
-        commandPath: ["status"],
-        env: {
-          ...process.env,
-          OPENCLAW_HIDE_BANNER: "1",
-        },
-      }).hideBanner,
+      shouldHideCliBannerForCommandPath(["status"], {
+        ...process.env,
+        OPENCLAW_HIDE_BANNER: "1",
+      }),
     ).toBe(true);
-    expect(resolvePolicy({ commandPath: ["status"], env: {} }).hideBanner).toBe(false);
+    expect(shouldHideCliBannerForCommandPath(["status"], {})).toBe(false);
   });
 
   it("uses process env banner suppression when startup env is omitted", () => {
@@ -203,6 +203,16 @@ describe("command-startup-policy", () => {
         process.env.OPENCLAW_HIDE_BANNER = originalHideBanner;
       }
     }
+  });
+
+  it("matches CLI PATH bootstrap policy", () => {
+    expect(shouldEnsureCliPathForCommandPath(["status"])).toBe(false);
+    expect(shouldEnsureCliPathForCommandPath(["sessions"])).toBe(false);
+    expect(shouldEnsureCliPathForCommandPath(["config", "get"])).toBe(false);
+    expect(shouldEnsureCliPathForCommandPath(["models", "status"])).toBe(false);
+    expect(shouldEnsureCliPathForCommandPath(["tools", "effective"])).toBe(false);
+    expect(shouldEnsureCliPathForCommandPath(["message", "send"])).toBe(true);
+    expect(shouldEnsureCliPathForCommandPath([])).toBe(true);
   });
 
   it("aggregates startup policy for commander and route-first callers", () => {

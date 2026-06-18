@@ -1,7 +1,5 @@
 {
   "id": "cohere",
-  "name": "Cohere",
-  "description": "OpenClaw Cohere provider plugin.",
   "activation": {
     "onStartup": false
   },

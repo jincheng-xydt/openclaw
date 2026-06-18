@@ -58,11 +58,10 @@ docker_build_transient_failure() {
 docker_build_retry_count() {
   local configured="${OPENCLAW_DOCKER_BUILD_RETRIES:-2}"
   if [[ "$configured" =~ ^[0-9]+$ ]]; then
-    echo "$((10#$configured))"
+    echo "$configured"
     return 0
   fi
-  echo "invalid OPENCLAW_DOCKER_BUILD_RETRIES: $configured" >&2
-  return 2
+  echo 2
 }
 
 docker_build_timeout_required() {
@@ -87,10 +86,9 @@ docker_build_heartbeat_seconds() {
   local configured="${OPENCLAW_DOCKER_BUILD_HEARTBEAT_SECONDS:-30}"
   if [[ "$configured" =~ ^[0-9]+$ ]] && [ "$configured" -ge 1 ]; then
     echo "$((10#$configured))"
-    return 0
+    return
   fi
-  echo "invalid OPENCLAW_DOCKER_BUILD_HEARTBEAT_SECONDS: $configured" >&2
-  return 2
+  echo 30
 }
 
 docker_build_run_command() {
@@ -207,8 +205,7 @@ docker_build_with_retries() {
   local label="$1"
   shift
   local retries
-  retries="$(docker_build_retry_count)" || return $?
-  docker_build_heartbeat_seconds >/dev/null || return $?
+  retries="$(docker_build_retry_count)"
   local attempt=1
   local max_attempts=$((retries + 1))
   local log_file

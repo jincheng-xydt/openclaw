@@ -15,8 +15,8 @@ import {
   resolveAllAgentSessionStoreTargetsSync,
   resolveSessionFilePath,
   resolveSessionTranscriptPathInDir,
+  updateSessionStore,
 } from "../config/sessions.js";
-import { applyRestartRecoveryLifecycle } from "../config/sessions/session-accessor.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import { callGateway } from "../gateway/call.js";
 import { readSessionMessagesAsync } from "../gateway/session-transcript-readers.js";
@@ -213,13 +213,13 @@ export async function markRestartAbortedMainSessions(params: {
   }
 
   for (const storePath of storePaths) {
-    const storeResult = await applyRestartRecoveryLifecycle({
+    await updateSessionStore(
       storePath,
-      requireWriteSuccess: true,
-      update: (entries) => {
-        const replacements: Array<{ sessionKey: string; entry: SessionEntry }> = [];
-        const counts = { marked: 0, skipped: 0 };
-        for (const { sessionKey, entry } of entries) {
+      (store) => {
+        for (const [sessionKey, entry] of Object.entries(store)) {
+          if (!entry) {
+            continue;
+          }
           const registeredActiveRuns = listAgentRunsForSession({
             sessionKey,
             sessionId: entry.sessionId,
@@ -248,7 +248,7 @@ export async function markRestartAbortedMainSessions(params: {
             continue;
           }
           if (shouldSkipMainRecovery(entry, sessionKey)) {
-            counts.skipped++;
+            result.skipped++;
             continue;
           }
           const wasRunning = entry.status === "running";
@@ -288,14 +288,12 @@ export async function markRestartAbortedMainSessions(params: {
               : a.runId.localeCompare(b.runId),
           );
           entry.updatedAt = Date.now();
-          replacements.push({ sessionKey, entry });
-          counts.marked++;
+          store[sessionKey] = entry;
+          result.marked++;
         }
-        return { result: counts, replacements };
       },
-    });
-    result.marked += storeResult.marked;
-    result.skipped += storeResult.skipped;
+      { skipMaintenance: true, requireWriteSuccess: true },
+    );
   }
 
   if (result.marked > 0) {
@@ -329,17 +327,18 @@ export async function markStartupOrphanedMainSessionsForRecovery(params: {
     providedActiveSessionKeys ?? normalizeStringSet(listActiveEmbeddedRunSessionKeys());
 
   for (const storePath of await resolveRestartRecoveryStorePaths(params)) {
-    const storeResult = await applyRestartRecoveryLifecycle({
+    await updateSessionStore(
       storePath,
-      update: (entries) => {
-        const replacements: Array<{ sessionKey: string; entry: SessionEntry }> = [];
-        const counts = { marked: 0, skipped: 0 };
-        for (const { sessionKey, entry } of entries) {
+      (store) => {
+        for (const [sessionKey, entry] of Object.entries(store)) {
+          if (!entry) {
+            continue;
+          }
           if (entry.status !== "running" || entry.abortedLastRun === true) {
             continue;
           }
           if (shouldSkipMainRecovery(entry, sessionKey)) {
-            counts.skipped++;
+            result.skipped++;
             continue;
           }
           const updatedAt = normalizeFiniteTimestamp(entry.updatedAt);
@@ -362,14 +361,12 @@ export async function markStartupOrphanedMainSessionsForRecovery(params: {
           }
           entry.abortedLastRun = true;
           entry.updatedAt = Date.now();
-          replacements.push({ sessionKey, entry });
-          counts.marked++;
+          store[sessionKey] = entry;
+          result.marked++;
         }
-        return { result: counts, replacements };
       },
-    });
-    result.marked += storeResult.marked;
-    result.skipped += storeResult.skipped;
+      { skipMaintenance: true },
+    );
   }
 
   if (result.marked > 0) {
@@ -441,13 +438,12 @@ async function markSessionFailed(params: {
   sessionKey: string;
   reason: string;
 }): Promise<void> {
-  await applyRestartRecoveryLifecycle({
-    storePath: params.storePath,
-    update: (entries) => {
-      const current = entries.find((entry) => entry.sessionKey === params.sessionKey);
-      const entry = current?.entry;
+  await updateSessionStore(
+    params.storePath,
+    (store) => {
+      const entry = store[params.sessionKey];
       if (!entry || entry.status !== "running") {
-        return { result: undefined };
+        return;
       }
       entry.status = "failed";
       entry.abortedLastRun = true;
@@ -462,12 +458,10 @@ async function markSessionFailed(params: {
       entry.pendingFinalDeliveryContext = undefined;
       entry.restartRecoveryDeliveryContext = undefined;
       entry.restartRecoveryDeliveryRunId = undefined;
-      return {
-        result: undefined,
-        replacements: [{ sessionKey: params.sessionKey, entry }],
-      };
+      store[params.sessionKey] = entry;
     },
-  });
+    { skipMaintenance: true },
+  );
   log.warn(`marked interrupted main session failed: ${params.sessionKey} (${params.reason})`);
 }
 
@@ -600,13 +594,12 @@ async function resumeMainSession(params: {
       params: agentParams,
       timeoutMs: 10_000,
     });
-    await applyRestartRecoveryLifecycle({
-      storePath: params.storePath,
-      update: (entries) => {
-        const current = entries.find((entry) => entry.sessionKey === params.sessionKey);
-        const entry = current?.entry;
+    await updateSessionStore(
+      params.storePath,
+      (store) => {
+        const entry = store[params.sessionKey];
         if (!entry) {
-          return { result: undefined };
+          return;
         }
         const now = Date.now();
         entry.abortedLastRun = false;
@@ -628,12 +621,10 @@ async function resumeMainSession(params: {
             entry.pendingFinalDeliveryContext = undefined;
           }
         }
-        return {
-          result: undefined,
-          replacements: [{ sessionKey: params.sessionKey, entry }],
-        };
+        store[params.sessionKey] = entry;
       },
-    });
+      { skipMaintenance: true },
+    );
     log.info(
       `resumed interrupted main session: ${params.sessionKey}${
         sanitizedPendingText ? " (with pending payload)" : ""
@@ -662,17 +653,15 @@ export async function markRestartAbortedMainSessionsFromLocks(params: {
   }
 
   const storePath = path.join(sessionsDir, "sessions.json");
-  const storeResult = await applyRestartRecoveryLifecycle({
+  await updateSessionStore(
     storePath,
-    update: (entries) => {
-      const replacements: Array<{ sessionKey: string; entry: SessionEntry }> = [];
-      const counts = { marked: 0, skipped: 0 };
-      for (const { sessionKey, entry } of entries) {
-        if (entry.status !== "running") {
+    (store) => {
+      for (const [sessionKey, entry] of Object.entries(store)) {
+        if (!entry || entry.status !== "running") {
           continue;
         }
         if (shouldSkipMainRecovery(entry, sessionKey)) {
-          counts.skipped++;
+          result.skipped++;
           continue;
         }
         const entryLockPaths = resolveEntryTranscriptLockPaths({ entry, sessionsDir });
@@ -680,14 +669,12 @@ export async function markRestartAbortedMainSessionsFromLocks(params: {
           continue;
         }
         entry.abortedLastRun = true;
-        replacements.push({ sessionKey, entry });
-        counts.marked++;
+        store[sessionKey] = entry;
+        result.marked++;
       }
-      return { result: counts, replacements };
     },
-  });
-  result.marked += storeResult.marked;
-  result.skipped += storeResult.skipped;
+    { skipMaintenance: true },
+  );
 
   if (result.marked > 0) {
     log.warn(`marked ${result.marked} interrupted main session(s) from stale transcript locks`);

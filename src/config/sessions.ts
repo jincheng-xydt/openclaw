@@ -26,7 +26,6 @@ export * from "./sessions/types.js";
 export * from "./sessions/transcript.js";
 export * from "./sessions/session-file.js";
 export * from "./sessions/session-file-rotation.js";
-export * from "./sessions/session-registry-maintenance.js";
 export * from "./sessions/delivery-info.js";
 export * from "./sessions/disk-budget.js";
 export * from "./sessions/targets.js";

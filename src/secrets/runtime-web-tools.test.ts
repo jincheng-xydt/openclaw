@@ -256,7 +256,6 @@ function buildTestWebFetchProviders(): PluginWebFetchProviderEntry[] {
       id: "firecrawl",
       label: "firecrawl",
       hint: "firecrawl test provider",
-      requiresCredential: false,
       envVars: ["FIRECRAWL_API_KEY"],
       placeholder: "fc-...",
       signupUrl: "https://example.com/firecrawl",
@@ -581,41 +580,6 @@ describe("runtime web tools resolution", () => {
     expect(resolveBundledExplicitWebFetchProvidersFromPublicArtifactsMock).toHaveBeenCalledWith({
       onlyPluginIds: ["firecrawl"],
     });
-  });
-
-  it("selects the configured keyless Firecrawl fetch provider without an API key", async () => {
-    const { metadata } = await runRuntimeWebTools({
-      config: asConfig({
-        tools: {
-          web: {
-            fetch: {
-              provider: "firecrawl",
-            },
-          },
-        },
-      }),
-    });
-
-    expect(metadata.fetch.providerSource).toBe("configured");
-    expect(metadata.fetch.selectedProvider).toBe("firecrawl");
-    expect(metadata.fetch.selectedProviderKeySource).toBe("missing");
-  });
-
-  it("does not auto-select keyless Firecrawl fetch without a credential", async () => {
-    const { metadata } = await runRuntimeWebTools({
-      config: asConfig({
-        tools: {
-          web: {
-            fetch: {
-              enabled: true,
-            },
-          },
-        },
-      }),
-    });
-
-    expect(metadata.fetch.providerSource).toBe("none");
-    expect(metadata.fetch.selectedProvider).toBeUndefined();
   });
 
   it("does not auto-select a keyless provider when no credentials are configured", async () => {
@@ -1434,56 +1398,33 @@ describe("runtime web tools resolution", () => {
     expect(resolvePluginWebFetchProvidersMock).not.toHaveBeenCalled();
   });
 
-  it("resolves SecretRefs for verified installed Firecrawl fetch config", async () => {
+  it("uses runtime web fetch discovery when the managed plugin index install records is populated", async () => {
     loadInstalledPluginIndexInstallRecordsSyncMock.mockReturnValue({
-      firecrawl: {
+      "external-fetch": {
         source: "npm",
-        spec: "@openclaw/firecrawl-plugin",
+        spec: "@openclaw/external-fetch",
       },
     });
-    resolveManifestContractOwnerPluginIdMock.mockReturnValueOnce(undefined);
 
-    const { metadata, resolvedConfig } = await runRuntimeWebTools({
+    const { metadata } = await runRuntimeWebTools({
       config: asConfig({
-        tools: {
-          web: {
-            fetch: {
-              provider: "firecrawl",
-            },
-          },
-        },
         plugins: {
           entries: {
             firecrawl: {
               config: {
                 webFetch: {
-                  apiKey: {
-                    source: "env",
-                    provider: "default",
-                    id: "FIRECRAWL_API_KEY",
-                  },
+                  apiKey: "firecrawl-config-key",
                 },
               },
             },
           },
         },
       }),
-      env: {
-        FIRECRAWL_API_KEY: "firecrawl-config-key",
-      },
     });
 
     expect(metadata.fetch.selectedProvider).toBe("firecrawl");
-    expect(metadata.fetch.selectedProviderKeySource).toBe("secretRef");
-    expect(
-      (
-        resolvedConfig.plugins?.entries?.firecrawl?.config as
-          | { webFetch?: { apiKey?: unknown } }
-          | undefined
-      )?.webFetch?.apiKey,
-    ).toBe("firecrawl-config-key");
     expect(resolveBundledWebFetchProvidersFromPublicArtifactsMock).not.toHaveBeenCalled();
-    expect(firstMockArg(resolvePluginWebFetchProvidersMock).sandboxed).toBe(true);
+    expect(firstMockArg(resolvePluginWebFetchProvidersMock).origin).toBe("bundled");
   });
 
   it("uses env fallback for unresolved web fetch provider SecretRef when active", async () => {

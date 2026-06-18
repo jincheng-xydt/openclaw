@@ -100,6 +100,10 @@ export function isCommandsLightTarget(file) {
   return commandsLightIncludePatternByFile.has(normalizeRepoPath(file));
 }
 
+export function isCommandsLightTestFile(file) {
+  return commandsLightTestFiles.includes(normalizeRepoPath(file));
+}
+
 export function resolveCommandsLightIncludePattern(file) {
   return commandsLightIncludePatternByFile.get(normalizeRepoPath(file)) ?? null;
 }

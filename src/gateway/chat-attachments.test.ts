@@ -26,6 +26,7 @@ vi.mock("../media/store.js", async (importOriginal) => {
 import { MAX_IMAGE_BYTES } from "@openclaw/media-core/constants";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import {
+  buildMessageWithAttachments,
   type ChatAttachment,
   DEFAULT_CHAT_ATTACHMENT_MAX_MB,
   parseMessageWithAttachments,
@@ -132,6 +133,25 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+});
+
+describe("buildMessageWithAttachments", () => {
+  it("embeds a single image as data URL", () => {
+    const msg = buildMessageWithAttachments("see this", [pngAttachment()]);
+    expect(msg).toContain("see this");
+    expect(msg).toContain(`data:image/png;base64,${PNG_1x1}`);
+    expect(msg).toContain("![dot.png]");
+  });
+
+  it("rejects non-image mime types", () => {
+    const bad: ChatAttachment = {
+      type: "file",
+      mimeType: "application/pdf",
+      fileName: "a.pdf",
+      content: "AAA",
+    };
+    expect(() => buildMessageWithAttachments("x", [bad])).toThrow(/image/);
+  });
 });
 
 describe("parseMessageWithAttachments", () => {
@@ -488,8 +508,8 @@ describe("resolveChatAttachmentMaxBytes", () => {
   });
 });
 
-describe("attachment validation", () => {
-  it("rejects invalid base64 content", async () => {
+describe("shared attachment validation", () => {
+  it("rejects invalid base64 content for both builder and parser", async () => {
     const bad: ChatAttachment = {
       type: "image",
       mimeType: "image/png",
@@ -497,12 +517,13 @@ describe("attachment validation", () => {
       content: "%not-base64%",
     };
 
+    expect(() => buildMessageWithAttachments("x", [bad])).toThrow(/base64/i);
     await expect(
       parseMessageWithAttachments("x", [bad], { log: { warn: () => {} } }),
     ).rejects.toThrow(/base64/i);
   });
 
-  it("rejects images over limit without decoding base64", async () => {
+  it("rejects images over limit for both builder and parser without decoding base64", async () => {
     const big = "A".repeat(10_000);
     const att: ChatAttachment = {
       type: "image",
@@ -513,6 +534,9 @@ describe("attachment validation", () => {
 
     const fromSpy = vi.spyOn(Buffer, "from");
     try {
+      expect(() => buildMessageWithAttachments("x", [att], { maxBytes: 16 })).toThrow(
+        /exceeds size limit/i,
+      );
       await expect(
         parseMessageWithAttachments("x", [att], { maxBytes: 16, log: { warn: () => {} } }),
       ).rejects.toThrow(/exceeds size limit/i);

@@ -3,14 +3,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { closeOpenClawStateDatabaseForTest } from "../state/openclaw-state-db.js";
-import { captureEnv, setTestEnvValue } from "../test-utils/env.js";
 import {
   buildAgentModelCatalogCacheKey,
   readCachedAgentModelCatalog,
   writeCachedAgentModelCatalog,
 } from "./model-catalog-state-cache.js";
 
-let envSnapshot: ReturnType<typeof captureEnv>;
+const ORIGINAL_STATE_DIR = process.env.OPENCLAW_STATE_DIR;
+
 let stateDir: string;
 
 function configuredModel(id: string) {
@@ -32,14 +32,17 @@ function configuredModel(id: string) {
 
 describe("model catalog state cache", () => {
   beforeEach(() => {
-    envSnapshot = captureEnv(["OPENCLAW_STATE_DIR"]);
     stateDir = mkdtempSync(join(tmpdir(), "openclaw-model-catalog-state-"));
-    setTestEnvValue("OPENCLAW_STATE_DIR", stateDir);
+    process.env.OPENCLAW_STATE_DIR = stateDir;
   });
 
   afterEach(() => {
     closeOpenClawStateDatabaseForTest();
-    envSnapshot.restore();
+    if (ORIGINAL_STATE_DIR === undefined) {
+      delete process.env.OPENCLAW_STATE_DIR;
+    } else {
+      process.env.OPENCLAW_STATE_DIR = ORIGINAL_STATE_DIR;
+    }
     rmSync(stateDir, { recursive: true, force: true });
   });
 
